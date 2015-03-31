@@ -100,6 +100,7 @@ int  level;
      SmeterReadValue = analogRead(SmeterReadPin);   // read value of signal 0 - 1023
      level = map(SmeterReadValue, 1023, 0,41,0);    // constrain the value into db 0 - 40
  
+  Serial.print("level = "); Serial.print(level);
      lcd.setCursor(12, 3);                      // print the s meter on line 4
      lcd.print("S       ");                       // blank out bars
      
@@ -111,6 +112,7 @@ int  level;
      if (level > 3 && level < 6) level = 5;
      if (level > 1 && level < 4) level = 3;
      if (level > 0 && level < 2) level = 1;
+   Serial.print(" level = "); Serial.println(level);   
      switch( level ){                           // write each bar required
         case 40:                                 // do not put break between case statements
           lcd.createChar(4, meter_s30);         // let the code fall through

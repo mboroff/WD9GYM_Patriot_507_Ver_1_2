@@ -1,13 +1,10 @@
-#ifdef WD9GYMTALKTOARDUINO  
+  
 
 
 void sendstringtoArduino(char* coDe, String buffer) {
-//    if (millis() - startTime > TIMETOSEND) {  // wait 10 seconds before contacting arduino
-        startTime = millis() - TIMETOSEND;    // because the Patriot will flood the line getting to start freq
         String stringToSend = coDe;
         stringToSend += ",";
         stringToSend += buffer;
-//        stringToSend += ",";
         Serial1.println(stringToSend);
         Serial.println(stringToSend);
 
@@ -31,7 +28,5 @@ void sendstringtoArduino(char* coDe, String buffer) {
                }
         }        
  */
-  //  }
 }
 
-#endif

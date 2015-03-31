@@ -12,7 +12,7 @@
 
 #define WD9GYMI2CLCD 1
 #define WD9GYMSMETER 1 
-#define WD9GYMTALKTOARDUINO 1
+
 
 /*  Code for Production 3_2_15
 <Patriot_507_Alpha_Rev01, Basic Software to operate a 2 band SSB/CW QRP Transceiver.
@@ -199,24 +199,6 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I
 #include <LiquidCrystal.h>    //  LCD Stuff
 LiquidCrystal lcd(26, 27, 28, 29, 30, 31);      //  LCD Stuff
 #endif
-#define IDLE_TIMEOUT_MS  1000
-unsigned long TIMETOSEND = 10000;
-unsigned long startTime;
-String stringArduinoTxFreq;
-String stringArduinoRIT;
-String stringArduinoRxFreq;
-String stringArduinoBand;
-String stringArduino_Frequency_Step;
-String stringArduinoBW;
-String stringArduinoMODE;
-String old_stringArduinoTxFreq;
-String old_stringArduinoRIT;
-String old_stringArduinoRxFreq;
-String old_stringArduinoBand;
-String old_stringArduino_Frequency_Step;
-String old_stringArduinoBW;
-String old_stringArduinoMODE;
-
 
 const char txt52[5]         = " ";
 const char txt57[6]         = "FREQ:" ;
@@ -246,6 +228,8 @@ const char txt160[7]        = "NARROW";
 const char txt170[7]        = "      ";
 
 String stringFREQ;
+String tx_stringFREQ;
+String old_stringFREQ;
 String stringREF;
 String string_Frequency_Step;
 String stringRIT;
@@ -437,11 +421,10 @@ void setup()
     //attachInterrupt(encoder0PinA, Encoder, CHANGE);
     //attachInterrupt(encoder0PinB, Encoder, CHANGE);
     attachCoreTimerService(TimerOverFlow);//See function at the bottom of the file.
-#ifdef WD9GYMTALKTOARDUINO 
-    Serial1.begin(4800);
-#endif   
+
+   Serial1.begin(115200);
     Serial.begin(115200);
- 
+    Serial.println("Patriot Ready:");
 
     lcd.begin(20, 4);                          // 20 chars 4 lines
                                                // or change to suit ones 
@@ -451,16 +434,15 @@ void setup()
     lcd.setCursor(0, 0);
     lcd.print("WD9GYM - PATRIOT");
     lcd.setCursor(0, 1);
-    lcd.print("Ver_1_2 3/27/2015");
-    delay(3000);
-    lcd.clear();
-    Display_Setup();
-#endif
-#ifdef WD9GYMTALKTOARDUINO  
+    lcd.print("Ver_1_1 3/20/2015");
     sendstringtoArduino("1", "Patriot Ready");
     sendstringtoArduino("8", "SSB");
     sendstringtoArduino("5", "40M");
     sendstringtoArduino("7", "Wide");
+    
+    delay(3000);
+    lcd.clear();
+    Display_Setup();
 #endif
 }   //    end of setup
 
@@ -486,6 +468,7 @@ void setup()
     // default band
     lcd.setCursor(17, 1);
     lcd.print(txt67);       // 40M   change this to txt66 for display of 20M
+ 
  // STEP
     lcd.setCursor(0, 2);
     lcd.print(txt90);       // STEP
@@ -500,6 +483,7 @@ void setup()
     // default BW
     lcd.setCursor(3, 3);
     lcd.print(txt140);      // Wide
+    
  
  // MODE
     lcd.setCursor(12, 2);
@@ -509,19 +493,18 @@ void setup()
      lcd.print(txt69);
       lcd.setCursor(17, 2);
         lcd.print(txt135);  // SSB
-        
 #else
  // BAT
     lcd.setCursor(12, 2);
     lcd.print(txt110);      // BAT  
-
+ 
  // BW
     lcd.setCursor(0, 3);
     lcd.print(txt120);      // BW
     // default BW
     lcd.setCursor(3, 3);
     lcd.print(txt140);      // Wide
-#endif    
+ 
  // MODE
     lcd.setCursor(12, 3);
     lcd.print(txt130);      // MODE
@@ -530,6 +513,7 @@ void setup()
      lcd.print(txt69);
       lcd.setCursor(17, 3);
         lcd.print(txt135);  // SSB
+#endif
 
 }      // end of Display_Setup
 
@@ -577,37 +561,18 @@ void loop()
   
     loopCount++;
     loopElapsedTime    = millis() - loopStartTime;
-#ifdef WD9GYMSMETER   
-    writeSmeter();         // call to smeter routine WD9GYM modification
-#endif    
 
     if( 1000 <= loopElapsedTime )
     {
-#ifndef WD9GYMTALKTOARDUINO
-     serialDump();    // comment this out to remove the one second tick
-#endif
-#ifdef WD9GYMTALKTOARDUINO
- /*
-      String buf;
-      SmeterReadValue = analogRead(SmeterReadPin);  // To give a realitive signal strength based on AGC voltage.
-      buf = String(SmeterReadValue, DEC);
-      sendstringtoArduino("9", buf);
-      BatteryReadValue = analogRead(BatteryReadPin);  // Reads 1/5 th or 0.20 of supply voltage.
-      buf = String(BatteryReadValue, DEC);
-      sendstringtoArduino("a", buf);
-      PowerOutReadValue = analogRead(PowerOutReadPin);  // Reads RF out voltage at Antenna.
-      buf = String(PowerOutReadValue, DEC);
-      sendstringtoArduino("b", buf);
-      CodeReadValue = analogRead(CodeReadPin); // Can be used to decode CW. 
-      buf = String(CodeReadValue, DEC);
-      sendstringtoArduino("c", buf);
-      CWSpeedReadValue = analogRead(CWSpeedReadPin);  // To adjust CW speed for user written keyer.
-      buf = String(CWSpeedReadValue, DEC);      
-      sendstringtoArduino("d", buf);
-*/
-#endif
-
+        serialDump();    // comment this out to remove the one second tick
+        if (old_stringFREQ != tx_stringFREQ) {
+            old_stringFREQ = tx_stringFREQ;
+            sendstringtoArduino("4", tx_stringFREQ);
+        }
     }
+#ifdef WD9GYMSMETER   
+    writeSmeter();         // call to smeter routine WD9GYM modification
+#endif    
 }    //  END LOOP
 
 //-----------------------------------------------------
@@ -1124,10 +1089,9 @@ void splash_RIT()      // not used
   
     lcd.setCursor(16, 0); 
     stringRIT = String( RitFreqOffset, DEC);
-    stringArduinoRIT = String( RitFreqOffset, DEC);  
+       
     lcd.print(stringRIT);
-    sendstringtoArduino("3", stringArduinoRIT);
-    
+    sendstringtoArduino("3", stringRIT);
  }
     old_RitFreqOffset = RitFreqOffset;      // test for Rit change
 }
@@ -1152,12 +1116,9 @@ void splash_TX_freq()
 
     lcd.setCursor(3, 1);
     stringFREQ = String(TXD_frequency / 10, DEC);
-#ifdef WD9GYMTALKTOARDUINO  
-    stringArduinoTxFreq = String(TXD_frequency / 10, DEC);
-    sendstringtoArduino("4", stringArduinoTxFreq);
-#endif    
+    tx_stringFREQ = String(TXD_frequency / 10, DEC);
     lcd.print(stringFREQ);
-    
+
     
  }
 //------------------------------------------------------------------------------
@@ -1186,15 +1147,9 @@ void splash_RX_freq()
     
     lcd.setCursor(3, 0);
     stringFREQ = String(RXD_frequency , DEC);
-#ifdef WD9GYMTALKTOARDUINO  
-    stringArduinoRxFreq = String(RXD_frequency , DEC);
-    sendstringtoArduino("2", stringArduinoRxFreq);
-#endif    
-
     lcd.print(stringFREQ);
-   
+    sendstringtoArduino("2", stringFREQ);
    }
-   
    old_frequency_tune = frequency_tune;
  }
  
@@ -1205,20 +1160,13 @@ void Splash_Band()
     {
         lcd.setCursor(17, 1);
         lcd.print(txt66);        // 20 meters
-#ifdef WD9GYMTALKTOARDUINO
-        stringArduinoBand = txt66;
-        sendstringtoArduino("5", stringArduinoBand);
-#endif
-     }
+        sendstringtoArduino("5", "20M");
+    }
     else                         
     {
         lcd.setCursor(17, 1);
         lcd.print(txt67);        // 40 meters
-#ifdef WD9GYMTALKTOARDUINO
-        stringArduinoBand = txt67;
-        sendstringtoArduino("5", stringArduinoBand);
-#endif
-        
+        sendstringtoArduino("5", "40M");
     } 
 }   
 
@@ -1234,10 +1182,8 @@ void Splash_Step_Size()
     lcd.setCursor(5, 2); 
 
     string_Frequency_Step = String(Frequency_Step, DEC);
-    stringArduino_Frequency_Step = String(Frequency_Step, DEC);
-    sendstringtoArduino("6", stringArduino_Frequency_Step);
     lcd.print(string_Frequency_Step);
-    
+    sendstringtoArduino("6", string_Frequency_Step);
  }
     old_Frequency_Step = Frequency_Step;      // test for Rit change 
 }
@@ -1254,8 +1200,7 @@ void Splash_BW()
         lcd.print(txt170);
           lcd.setCursor(3, 3);
             lcd.print(txt140);  // wide
-            stringArduinoBW = txt140;
-            sendstringtoArduino("7", stringArduinoBW);
+            sendstringtoArduino("7", "Wide");
   }
  else if ( b == 0x40 )
   { 
@@ -1263,16 +1208,14 @@ void Splash_BW()
         lcd.print(txt170);
           lcd.setCursor(3, 3);
             lcd.print(txt150);  // medium
-             stringArduinoBW = txt150;
-             sendstringtoArduino("7", stringArduinoBW);
+            sendstringtoArduino("7", "Medium");
   }
  else {
       lcd.setCursor(3, 3);
         lcd.print(txt170);
           lcd.setCursor(3, 3);
             lcd.print(txt160);  // narrow
-            stringArduinoBW = txt160;
-            sendstringtoArduino("7", stringArduinoBW);
+            sendstringtoArduino("7", "Narrow");
   }
  }
   old_b = b ;
@@ -1290,8 +1233,7 @@ void Splash_MODE()
      lcd.print(txt69);
       lcd.setCursor(17, 2);
         lcd.print(txt135);    // SSB
-        stringArduinoMODE = txt135;
-        sendstringtoArduino("8", stringArduinoMODE);
+        sendstringtoArduino("8", "SSB");
   }
   else                         
   {
@@ -1299,16 +1241,14 @@ void Splash_MODE()
      lcd.print(txt69);
        lcd.setCursor(17, 2);
         lcd.print(txt132);    // CW
-        stringArduinoMODE = txt132;
-        sendstringtoArduino("8", stringArduinoMODE);
+        sendstringtoArduino("8", "CW");
   }
 #else
     lcd.setCursor(17, 3);
      lcd.print(txt69);
       lcd.setCursor(17, 3);
         lcd.print(txt135);    // SSB
-        stringArduinoMODE = txt135;
-        sendstringtoArduino("8", stringArduinoMODE);
+        sendstringtoArduino("8", "SSB");
   }
   else                         
   {
@@ -1316,8 +1256,7 @@ void Splash_MODE()
      lcd.print(txt69);
        lcd.setCursor(17, 3);
         lcd.print(txt132);    // CW
-        stringArduinoMODE = txt132;
-        sendstringtoArduino("8", stringArduinoMODE);
+        sendstringtoArduino("8", "CW");
   }
 
 #endif
